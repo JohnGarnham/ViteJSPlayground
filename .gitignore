@@ -6,4 +6,5 @@ yarn.lock
 *.log
 tsconfig.json
 README.md
+*.csv
 *~

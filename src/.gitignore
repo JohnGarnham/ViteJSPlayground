@@ -3,5 +3,6 @@ walletFromMnemonic.js
 timeUtil.js
 showDailyRewards.js
 showVotes.js
+showSBPRewardsByCycle.js
 *~
 yarn.lock
