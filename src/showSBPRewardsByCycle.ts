@@ -1,3 +1,8 @@
+// Usage: $ node showSBPRewardsByCycle <cycle>
+//
+// Generates a CSV file with the SBP reward summary data for either
+// the current cycle or the cycle specified by the user
+
 import { HTTP_RPC } from '@vite/vitejs-http';
 import { ViteAPI } from '@vite/vitejs';
 import { BigInt } from '@vite/vitejs/distSrc/accountblock/type';
@@ -7,7 +12,7 @@ import {getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
 require('dotenv').config();
 
 // Grab files from .env
-const RPC_NET = process.env.RPC_NET || 'ws://localhost:23457';
+const RPC_NET = process.env.RPC_NET;
 
 // Initialize ViteClient
 const httpProvider = new HTTP_RPC(RPC_NET);
@@ -33,7 +38,6 @@ interface RewardByDayInfo {
 // Return SBP rewards in 24h by timestamp. Rewards of all SBP nodes in the cycle that the given timestamp belongs will be returned. 
 // https://docs.vite.org/go-vite/api/rpc/contract_v2.html#contract-getsbprewardbytimestamp 
 const getSBPRewardByTimestamp = async (timestamp: number) => {
-	console.log("Grabbing rewards info for " + timestamp)
 	// Make RPC call pass in timestamp in seconds
 	const rewardByDayInfo: RewardByDayInfo = await viteClient.request('contract_getSBPRewardByTimestamp', timestamp);
 	// Return the daily reward information
