@@ -2,7 +2,7 @@ import { HTTP_RPC } from '@vite/vitejs-http';
 import { ViteAPI, wallet, accountBlock } from '@vite/vitejs';
 import { Address, BigInt, AddressObj } from '@vite/vitejs/distSrc/accountblock/type';
 import { Int64, Uint64, RPCResponse } from '@vite/vitejs/distSrc/utils/type';
-import { getLatestCycleTimestampFromNow } from './timeUtil';
+import {getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
 
 require('dotenv').config();
 
@@ -104,7 +104,7 @@ const getSBPRewardByCycle = async (cycle: string) => {
 // getSBPVoteDetails
 // blockProducer - the SBP node to find data for
 // cycleNumber - optional to override for specific cycle number
-const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string): Promise<Receiver[]> => {
+const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string) => {
 	// Grab rewardByDayInfo
 	let rewardByDayInfo: RewardByDayInfo;
     if (cycleNumber) {
@@ -123,16 +123,6 @@ const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string): P
         });
     }
 	const {rewardMap, cycle} = rewardByDayInfo;
-	// Output headers
-	console.log(`Cycle #${cycle}`);
-	console.log("Name,Total Reward,Blocks Produced,Voting Reward,Produced Blocks,Target Blocks")
-	for (const key in rewardMap) {
-        //if (Object.prototype.hasOwnProperty.call(rewardMap, key) && key == blockProducer) {
-            const element = rewardMap[key];
-            console.log(`${key},${element.totalReward},${element.producedBlocks},${element.votingReward},${element.producedBlocks},${element.targetBlocks}`);
-        //}
-    }
-	return;
 	// Calculate reward distributions
 	const devFundWeight = Number(DEV_FUND_PERCENTAGE) / 100;
 	const communityFundWeight = Number(COMMUNITY_FUND_PERCENTAGE) / 100;
@@ -147,33 +137,35 @@ const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string): P
 		amount: (totalReward * communityFundWeight).toPrecision(21).toString(),
 	};
 	console.log(`Total Reward: ${totalReward.toPrecision(22)}`);
-	return viteClient
-		.request('contract_getSBPVoteDetailsByCycle', cycle)
-		.then((voteDetails: ReadonlyArray<SBPVoteDetail>): Receiver[] =>
-			voteDetails
-				.filter(voteDetail => voteDetail.blockProducerName === blockProducer)
-				.map(({ totalVotes, addressVoteMap }) =>
-					Object.keys(addressVoteMap).map(
-						(key): Receiver => {
-							const addressVotes = addressVoteMap[key];
-							const weightedReward = Math.floor(
-								(Number(addressVotes) / Number(totalVotes)) * voterRewardPool
-							);
-							if (weightedReward > 0) {
-								return { address: key, amount: weightedReward.toString() };
-							}
-						}
-					)
-				)
-				.reduce((a, b) => a.concat(b), [])
-		)
-		.then(receivers => receivers.filter(x => x != null || x != undefined))
-		.then(receivers => [...receivers, devReceiver, communityReceiver])
-		.catch(err => {
-			console.warn(err);
-			return [];
-		});
-};
+     // Now grab SBP vote details of this particular cycle
+    var fs = require('fs');
+    const dateTimeStr = getYYMMDD();    // Use YYMMDDHHMMss to make filename unique and easily sortable
+    const voteDetails: ReadonlyArray<SBPVoteDetail> = await viteClient.request('contract_getSBPVoteDetailsByCycle', cycle);
+    var filename = dateTimeStr + "SBPVoteDetailsByCycle" + String(cycle) + ".csv";
+	var stream = fs.createWriteStream(filename);
+	stream.once('open', function(fd) {
+        stream.write("Addresss,Vote Weight (VITE),Weight Percentage,Weighted Reward (VITE)\n");
+        for(var i = 0; i < voteDetails.length; i++) {
+            const vote : SBPVoteDetail = voteDetails[i];
+            // Find vote details that have a matching block producer name
+            if(vote.blockProducerName == blockProducer) {
+                stream.write(vote.totalVotes)
+                // Grab address vote map
+                const voteMap = vote.addressVoteMap; // map<string address, string bigint> 
+                let totalVotes = vote.totalVotes;   // Total # of vote
+                for (const address in voteMap) {
+                    const voteWeight = voteMap[address];
+                    let votePercent = (Number(voteWeight) / Number(totalVotes));
+                    const weightedReward = Math.floor(votePercent * voterRewardPool);
+                    //console.log(`Address: ${address} Vote: ${voteWeight} ${votePercent * 100}%,Weight Reward: ${weightedReward}`);
+                    stream.write(`${address},${rawToVite(voteWeight)},${votePercent * 100}%,${rawToVite(weightedReward)}\n`);
+                }
+            }
+        }
+        stream.end();
+    });
+    console.log(`Created spreadsheet with voter reward data in ${filename}`);
+}
 
 // Convert RAW units to VITE (18 decimal points)
 const rawToVite = function(raw) {
@@ -181,17 +173,10 @@ const rawToVite = function(raw) {
 }
 
 // User can pass in optional cycle number
-const cycleNumber = process.argv[2];
+const cycleOverride = process.argv[2];
+const SBPOverride = process.argv[3];
 // Get SBP vote data for SBP node and optional cycle number
-getSBPVoteDetails(SBPName,cycleNumber)
-.then(receivers => {
-	if (receivers.length < 1) {
-		console.warn(`There are no receivers.`);
-		return;
-	}
-	console.log(`Receivers: ${JSON.stringify(receivers)}`);
-	sendLoop(receivers);
-})
+getSBPVoteDetails(SBPName,cycleOverride)
 .catch(error => {
 	console.error("Could not get SBP vote details for " + SBPName + ":" + error.message);
 });
