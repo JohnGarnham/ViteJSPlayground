@@ -2,5 +2,6 @@ generateNewWallet.js
 walletFromMnemonic.js
 timeUtil.js
 showDailyRewards.js
+showVotes.js
 *~
 yarn.lock
