@@ -10,4 +10,8 @@ export const getTodayForFilename = () => {
     return DateTime.now().toFormat("yyyy-MM-dd");
 }
 
+export const getYYMMDD = () => {
+    return DateTime.now().toFormat('yyyyMMddHHMMss');
+};
+
 console.log("Current timestamp: ", getLatestCycleTimestampFromNow());
