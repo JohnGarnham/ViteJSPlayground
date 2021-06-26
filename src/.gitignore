@@ -1,3 +1,6 @@
 generateNewWallet.js
 walletFromMnemonic.js
+timeUtil.js
+showDailyRewards.js
 *~
+yarn.lock
