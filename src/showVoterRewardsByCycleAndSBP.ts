@@ -104,11 +104,12 @@ const getSBPRewardByCycle = async (cycle: string) => {
 // getSBPVoteDetails
 // blockProducer - the SBP node to find data for
 // cycleNumber - optional to override for specific cycle number
+// SBPOverride - optional to override SBP
 const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string) => {
 	// Grab rewardByDayInfo
 	let rewardByDayInfo: RewardByDayInfo;
     if (cycleNumber) {
-		console.log("Grabbing daily SBP reward information for cycle ", cycleNumber);
+		console.log("Grabbing daily SBP reward information for cycle ", cycleNumber, " and SBP ", blockProducer);
 		// Grab daily reward info for specified cycle #
         rewardByDayInfo = await getSBPRewardByCycle(cycleNumber).catch((res: RPCResponse) => {
             console.log(`Could not retrieve SBP rewards for cycle ${cycleNumber}`, res);
@@ -116,7 +117,7 @@ const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string) =>
         });
     } else {
 		// Grab daily reward info for current cycle #
-		console.log("Grabbing daily SBP reward information for current cycle");
+		console.log("Grabbing daily SBP reward information for current cycle and SBP ", blockProducer);
         rewardByDayInfo = await getSBPRewardByTimestamp(getLatestCycleTimestampFromNow()).catch((res: RPCResponse) => {
             console.log(`Could not retrieve SBP rewards.`, res);
             throw res.error;
@@ -141,7 +142,7 @@ const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string) =>
     var fs = require('fs');
     const dateTimeStr = getYYMMDD();    // Use YYMMDDHHMMss to make filename unique and easily sortable
     const voteDetails: ReadonlyArray<SBPVoteDetail> = await viteClient.request('contract_getSBPVoteDetailsByCycle', cycle);
-    var filename = dateTimeStr + "SBPVoteDetailsByCycle" + String(cycle) + ".csv";
+    var filename = dateTimeStr + blockProducer + "voteDetailsByCycle" + String(cycle) + ".csv";
 	var stream = fs.createWriteStream(filename);
 	stream.once('open', function(fd) {
         stream.write("Addresss,Vote Weight (VITE),Weight Percentage,Weighted Reward (VITE)\n");
@@ -175,8 +176,15 @@ const rawToVite = function(raw) {
 // User can pass in optional cycle number
 const cycleOverride = process.argv[2];
 const SBPOverride = process.argv[3];
+// See if user wants to override SBP
+let blockProducer = "";
+if(SBPOverride != undefined) {
+    blockProducer = SBPOverride;
+} else {
+    blockProducer = SBPName;
+}
 // Get SBP vote data for SBP node and optional cycle number
-getSBPVoteDetails(SBPName,cycleOverride)
+getSBPVoteDetails(blockProducer,cycleOverride)
 .catch(error => {
 	console.error("Could not get SBP vote details for " + SBPName + ":" + error.message);
 });

@@ -4,5 +4,6 @@ timeUtil.js
 showDailyRewards.js
 showVotes.js
 showSBPRewardsByCycle.js
+showVoterRewards.js
 *~
 yarn.lock
