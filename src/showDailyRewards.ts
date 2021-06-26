@@ -95,15 +95,26 @@ const getSBPRewardByTimestamp = async (timestamp: number) => {
 	return rewardByDayInfo;
 };
 
-const getSBPVoteDetailsBy = async (blockProducer: string): Promise<Receiver[]> => {
-	// Grab reward information
-	const { rewardMap, cycle }: RewardByDayInfo = await getSBPRewardByTimestamp(getLatestCycleTimestampFromNow())
-		.catch(
-			(res: RPCResponse) => {
-				console.error(`Could not retrieve SBP rewards for cycle ${cycle}. ${res.error.code}: ${res.error.message}`);
-				throw res.error;
-			}
-		);
+const getSBPRewardByCycle = async (cycle: string) => {
+    const rewardByDayInfo: RewardByDayInfo = await viteClient.request('contract_getSBPRewardByCycle', cycle);
+    return rewardByDayInfo;
+};
+
+
+const getSBPVoteDetailsBy = async (blockProducer: string, cycleNumber?: string): Promise<Receiver[]> => {
+	let rewardByDayInfo: RewardByDayInfo;
+    if (cycleNumber) {
+        rewardByDayInfo = await getSBPRewardByCycle(cycleNumber).catch((res: RPCResponse) => {
+            console.log(`Could not retrieve SBP rewards for cycle ${cycleNumber}`, res);
+            throw res.error;
+        });
+    } else {
+        rewardByDayInfo = await getSBPRewardByTimestamp(getLatestCycleTimestampFromNow()).catch((res: RPCResponse) => {
+            console.log(`Could not retrieve SBP rewards.`, res);
+            throw res.error;
+        });
+    }
+	const {rewardMap, cycle} = rewardByDayInfo;
 	console.log(`Running for cycle: ${cycle}`);
 	// Calculate reward distributions
 	const devFundWeight = Number(DEV_FUND_PERCENTAGE) / 100;
@@ -148,8 +159,8 @@ const getSBPVoteDetailsBy = async (blockProducer: string): Promise<Receiver[]> =
 		});
 };
 
-const prepareSBDVoteDetails = () => {
-	getSBPVoteDetailsBy('ViNo_Community_Node')
+const prepareSBDVoteDetails = (cycleNumber?: string) => {
+	getSBPVoteDetailsBy('ViNo_Community_Node',cycleNumber)
 		.then(receivers => {
 			if (receivers.length < 1) {
 				console.warn(`There are no receivers.`);
@@ -163,4 +174,7 @@ const prepareSBDVoteDetails = () => {
 		});
 };
 
-prepareSBDVoteDetails();
+const args = process.argv;
+const cycleNumber = args[2];
+console.log("Cycle number: ", cycleNumber);
+prepareSBDVoteDetails(cycleNumber);
