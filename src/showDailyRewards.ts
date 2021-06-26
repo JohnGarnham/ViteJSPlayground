@@ -15,6 +15,7 @@ interface Receiver {
 
 // Grab files from .env
 const RPC_NET = process.env.RPC_NET || 'ws://localhost:23457';
+const SBPName = process.env.SBP_NAME || 'ViNo_Community_Node';
 const DEV_FUND_PERCENTAGE = process.env.DEV_FUND_PERCENTAGE || 50;
 const COMMUNITY_FUND_PERCENTAGE = process.env.COMMUNITY_FUND_PERCENTAGE || 10;
 const COMMUNITY_FUND_WALLET = process.env.COMMUNITY_FUND_ADDRESS || '';
@@ -100,28 +101,43 @@ const getSBPRewardByCycle = async (cycle: string) => {
     return rewardByDayInfo;
 };
 
-
-const getSBPVoteDetailsBy = async (blockProducer: string, cycleNumber?: string): Promise<Receiver[]> => {
+// getSBPVoteDetails
+// blockProducer - the SBP node to find data for
+// cycleNumber - optional to override for specific cycle number
+const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string): Promise<Receiver[]> => {
+	// Grab rewardByDayInfo
 	let rewardByDayInfo: RewardByDayInfo;
     if (cycleNumber) {
+		console.log("Grabbing daily SBP reward information for cycle ", cycleNumber);
+		// Grab daily reward info for specified cycle #
         rewardByDayInfo = await getSBPRewardByCycle(cycleNumber).catch((res: RPCResponse) => {
             console.log(`Could not retrieve SBP rewards for cycle ${cycleNumber}`, res);
             throw res.error;
         });
     } else {
+		// Grab daily reward info for current cycle #
+		console.log("Grabbing daily SBP reward information for current cycle");
         rewardByDayInfo = await getSBPRewardByTimestamp(getLatestCycleTimestampFromNow()).catch((res: RPCResponse) => {
             console.log(`Could not retrieve SBP rewards.`, res);
             throw res.error;
         });
     }
 	const {rewardMap, cycle} = rewardByDayInfo;
-	console.log(`Running for cycle: ${cycle}`);
+	// Output headers
+	console.log(`Cycle #${cycle}`);
+	console.log("Name,Total Reward,Blocks Produced,Voting Reward,Produced Blocks,Target Blocks")
+	for (const key in rewardMap) {
+        //if (Object.prototype.hasOwnProperty.call(rewardMap, key) && key == blockProducer) {
+            const element = rewardMap[key];
+            console.log(`${key},${element.totalReward},${element.producedBlocks},${element.votingReward},${element.producedBlocks},${element.targetBlocks}`);
+        //}
+    }
+	return;
 	// Calculate reward distributions
 	const devFundWeight = Number(DEV_FUND_PERCENTAGE) / 100;
 	const communityFundWeight = Number(COMMUNITY_FUND_PERCENTAGE) / 100;
 	const totalReward = Number.parseInt(rewardMap[blockProducer]?.totalReward ?? '0');
 	const voterRewardPool = totalReward * (1 - devFundWeight - communityFundWeight);
-
 	const devReceiver: Receiver = {
 		address: DEV_FUND_ADDRESS,
 		amount: (totalReward * devFundWeight).toPrecision(22).toString(),
@@ -159,22 +175,23 @@ const getSBPVoteDetailsBy = async (blockProducer: string, cycleNumber?: string):
 		});
 };
 
-const prepareSBDVoteDetails = (cycleNumber?: string) => {
-	getSBPVoteDetailsBy('ViNo_Community_Node',cycleNumber)
-		.then(receivers => {
-			if (receivers.length < 1) {
-				console.warn(`There are no receivers.`);
-				return;
-			}
-			console.log(`Receivers: ${JSON.stringify(receivers)}`);
-			sendLoop(receivers);
-		})
-		.catch(error => {
-			console.error('onRejected function called: ' + error.message);
-		});
-};
+// Convert RAW units to VITE (18 decimal points)
+const rawToVite = function(raw) {
+    return raw / 1e18;
+}
 
-const args = process.argv;
-const cycleNumber = args[2];
-console.log("Cycle number: ", cycleNumber);
-prepareSBDVoteDetails(cycleNumber);
+// User can pass in optional cycle number
+const cycleNumber = process.argv[2];
+// Get SBP vote data for SBP node and optional cycle number
+getSBPVoteDetails(SBPName,cycleNumber)
+.then(receivers => {
+	if (receivers.length < 1) {
+		console.warn(`There are no receivers.`);
+		return;
+	}
+	console.log(`Receivers: ${JSON.stringify(receivers)}`);
+	sendLoop(receivers);
+})
+.catch(error => {
+	console.error("Could not get SBP vote details for " + SBPName + ":" + error.message);
+});
