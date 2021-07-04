@@ -8,3 +8,5 @@ showVoterRewards.js
 showVoterRewardsByCycleAndSBP.js
 *~
 yarn.lock
+*.csv
+*.js
