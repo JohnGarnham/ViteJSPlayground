@@ -3,15 +3,11 @@ import { ViteAPI, wallet, accountBlock } from '@vite/vitejs';
 import { Address, BigInt, AddressObj } from '@vite/vitejs/distSrc/accountblock/type';
 import { Int64, Uint64, RPCResponse } from '@vite/vitejs/distSrc/utils/type';
 import {getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
+import { Receiver } from './viteTypes'
 
 require('dotenv').config();
 
 const { createAccountBlock } = accountBlock;
-
-interface Receiver {
-	address: Address;
-	amount: BigInt;
-}
 
 // Grab files from .env
 const RPC_NET = process.env.RPC_NET || 'ws://localhost:23457';

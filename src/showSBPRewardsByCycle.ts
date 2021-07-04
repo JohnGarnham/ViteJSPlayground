@@ -7,7 +7,8 @@ import { HTTP_RPC } from '@vite/vitejs-http';
 import { ViteAPI } from '@vite/vitejs';
 import { BigInt } from '@vite/vitejs/distSrc/accountblock/type';
 import { Int64, Uint64, RPCResponse } from '@vite/vitejs/distSrc/utils/type';
-import {getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
+import { getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
+import { RewardInfo, RewardByDayInfo } from './viteTypes'
 
 require('dotenv').config();
 
@@ -19,21 +20,6 @@ const httpProvider = new HTTP_RPC(RPC_NET);
 const viteClient = new ViteAPI(httpProvider, () => {
 	console.log('Vite client successfully connected: ');
 });
-
-interface RewardInfo {
-	totalReward: BigInt;
-	blockProducingReward: BigInt;
-	votingReward: BigInt;
-	producedBlocks: BigInt;
-	targetBlocks: BigInt;
-}
-
-interface RewardByDayInfo {
-	rewardMap: ReadonlyMap<string, RewardInfo>;
-	startTime: Int64;
-	endTime: Int64;
-	cycle: Uint64;
-}
 
 // Return SBP rewards in 24h by timestamp. Rewards of all SBP nodes in the cycle that the given timestamp belongs will be returned. 
 // https://docs.vite.org/go-vite/api/rpc/contract_v2.html#contract-getsbprewardbytimestamp 
