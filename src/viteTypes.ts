@@ -20,3 +20,20 @@ export interface Receiver {
 	address: Address;
 	amount: BigInt;
 }
+
+export interface SBPVoteDetail {
+	blockProducerName: string;
+	totalVotes: BigInt;
+	blockProducingAddress: Address;
+	historyProducingAddresses: ReadonlyArray<Address>;
+	addressVoteMap: AddressVoteMap;
+}
+
+export interface AddressVoteMap {
+	[key: string]: string;
+}
+
+// Convert RAW units to VITE (18 decimal points)
+export const rawToVite = function(raw) {
+    return raw / 1e18;
+}

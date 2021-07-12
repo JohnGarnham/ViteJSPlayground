@@ -3,7 +3,7 @@ import { ViteAPI, wallet, accountBlock } from '@vite/vitejs';
 import { Address, BigInt, AddressObj } from '@vite/vitejs/distSrc/accountblock/type';
 import { Int64, Uint64, RPCResponse } from '@vite/vitejs/distSrc/utils/type';
 import {getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
-import { Receiver } from './viteTypes'
+import { RewardInfo, SBPVoteDetail, RewardByDayInfo, Receiver, rawToVite } from './viteTypes'
 
 require('dotenv').config();
 
@@ -23,64 +23,6 @@ const viteClient = new ViteAPI(httpProvider, () => {
 	console.log('Vite client successfully connected: ');
 });
 
-// derive account from seed phrase. Refer to https://docs.vite.org/vite.js/wallet/
-const sendAccount: AddressObj = wallet.getWallet(process.env.MNEMONICS).deriveAddress(0);
-
-const sendTx = async (address: Address, amount: BigInt) => {
-	// Build new send block
-	const block = createAccountBlock('send', {
-		address: sendAccount.address,
-		toAddress: address,
-		amount,
-	})
-		.setProvider(viteClient)
-		.setPrivateKey(sendAccount.privateKey);
-	// Link block to previous block
-	await block.autoSetPreviousAccountBlock();
-	console.log("Height: " + block.height + " Previous Hash: " + block.previousHash + " Hash: " + block.hash);
-	// Send block
-	return block.sendByPoW();
-};
-
-const sendLoopInterval = 20 * 1000;
-const sendLoop = (receivers: ReadonlyArray<Receiver>) => {
-	console.log(`Sending to ${receivers.length} receivers.`);
-	receivers.forEach(async (receiver, index) => {
-		setTimeout(async () => {
-			const { address, amount } = receiver;
-			await sendTx(address, amount)
-				.then(() => console.log(`Successfully sent ${amount} to ${address}.`))
-				.catch(err => console.error(`Could not send ${amount} to ${address}: ${err.error.message}`));
-		}, sendLoopInterval * index);
-	});
-};
-
-interface RewardInfo {
-	totalReward: BigInt;
-	blockProducingReward: BigInt;
-	votingReward: BigInt;
-	producedBlocks: BigInt;
-	targetBlocks: BigInt;
-}
-
-interface RewardByDayInfo {
-	rewardMap: ReadonlyMap<string, RewardInfo>;
-	startTime: Int64;
-	endTime: Int64;
-	cycle: Uint64;
-}
-
-interface SBPVoteDetail {
-	blockProducerName: string;
-	totalVotes: BigInt;
-	blockProducingAddress: Address;
-	historyProducingAddresses: ReadonlyArray<Address>;
-	addressVoteMap: AddressVoteMap;
-}
-
-interface AddressVoteMap {
-	[key: string]: string;
-}
 
 // Return SBP rewards in 24h by timestamp. Rewards of all SBP nodes in the cycle that the given timestamp belongs will be returned. 
 // https://docs.vite.org/go-vite/api/rpc/contract_v2.html#contract-getsbprewardbytimestamp 
@@ -162,11 +104,6 @@ const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string) =>
         stream.end();
     });
     console.log(`Created spreadsheet with voter reward data in ${filename}`);
-}
-
-// Convert RAW units to VITE (18 decimal points)
-const rawToVite = function(raw) {
-    return raw / 1e18;
 }
 
 // User can pass in optional cycle number

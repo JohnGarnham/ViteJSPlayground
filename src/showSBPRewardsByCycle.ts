@@ -5,10 +5,9 @@
 
 import { HTTP_RPC } from '@vite/vitejs-http';
 import { ViteAPI } from '@vite/vitejs';
-import { BigInt } from '@vite/vitejs/distSrc/accountblock/type';
-import { Int64, Uint64, RPCResponse } from '@vite/vitejs/distSrc/utils/type';
+import { RPCResponse } from '@vite/vitejs/distSrc/utils/type';
 import { getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
-import { RewardInfo, RewardByDayInfo } from './viteTypes'
+import { RewardByDayInfo, rawToVite } from './viteTypes'
 
 require('dotenv').config();
 
@@ -82,10 +81,7 @@ const getSBPVoteDetails = async (cycleNumber?: string) => {
     console.log(`Created spreadsheet with reward data in ${filename}`);
 };
 
-// Convert RAW units to VITE (18 decimal points)
-const rawToVite = function(raw) {
-    return raw / 1e18;
-}
+
 
 // User can pass in optional cycle number
 const cycleNumber = process.argv[2];
