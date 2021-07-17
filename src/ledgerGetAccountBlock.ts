@@ -21,8 +21,10 @@ const viteClient = new ViteAPI(httpProvider, () => {
 
 let accountBlocks : AccountBlockType[];
 
-const getLedgerByAddress = async (account: string) => {
-    const ledger : AccountBlockType = await viteClient.request('ledger_getAccountBlocks', account, null, null, 3);
+const getLedgerByAddress = async (account: string, hash?: string, tti?: string, blocks?: number) => {
+    if(hash == "0") hash = null;
+    if(tti == "0") tti = null;
+    const ledger : AccountBlockType = await viteClient.request('ledger_getAccountBlocks', account, hash, tti, blocks);
     return ledger;
 }
 
@@ -31,26 +33,36 @@ const getLedgerByBlockHeight = async (height: string) => {
     return ledger;
 }
 
-const showLedgerDetails = async (accountNumber?: string) => {
+const showLedgerDetails = async (accountNumber: string, hash?: string, tti? :string, blocks? : number) => {
 
     let ledgerInfo: AccountBlockType;
 
     // Get ledger info for specified address
-    ledgerInfo = await getLedgerByAddress(accountNumber).catch((res: RPCResponse) => {
+    ledgerInfo = await getLedgerByAddress(accountNumber, hash, tti, blocks).catch((res: RPCResponse) => {
         console.log(`Could not retrieve ledger for ${accountNumber}}`, res);
         throw res.error;
     });
 
     console.log(ledgerInfo);
-    
+
 }
 
 // User can pass in optional cycle number
 const accountLookup = process.argv[2];
+const hash = process.argv[3];
+const tti = process.argv[4];
+const numBlocks = process.argv[5];
+let blocks = 0;
 
 console.log("Looking up ledger for account: " + accountLookup);
+if(hash != undefined) console.log("Hash: " + hash);
+if(tti != undefined) console.log("TTI: " + tti);
+if(numBlocks != undefined) {
+    console.log("Num blocks: " + numBlocks);
+    blocks = parseInt(numBlocks);
+}
 
-showLedgerDetails(accountLookup)
+showLedgerDetails(accountLookup,hash,tti,blocks)
 .catch(error => {
 	console.error("Error while grabbing ledger information:" + error.message);
 });
