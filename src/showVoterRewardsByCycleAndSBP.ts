@@ -1,21 +1,17 @@
 import { HTTP_RPC } from '@vite/vitejs-http';
-import { ViteAPI, wallet, accountBlock } from '@vite/vitejs';
-import { Address, BigInt, AddressObj } from '@vite/vitejs/distSrc/accountblock/type';
-import { Int64, Uint64, RPCResponse } from '@vite/vitejs/distSrc/utils/type';
+import { ViteAPI } from '@vite/vitejs';
+import { RPCResponse } from '@vite/vitejs/distSrc/utils/type';
 import {getLatestCycleTimestampFromNow, getYYMMDD} from './timeUtil';
-import { RewardInfo, SBPVoteDetail, RewardByDayInfo, Receiver, rawToVite } from './viteTypes'
+import { SBPVoteDetail, RewardByDayInfo, Receiver, rawToVite } from './viteTypes'
 
+// Grab data from .env
 require('dotenv').config();
-
-const { createAccountBlock } = accountBlock;
 
 // Grab files from .env
 const RPC_NET = process.env.RPC_NET || 'ws://localhost:23457';
-const SBPName = process.env.SBP_NAME || 'ViNo_Community_Node';
+const SBP_NAME = process.env.SBP_NAME || 'ViNo_Community_Node';
 const DEV_FUND_PERCENTAGE = process.env.DEV_FUND_PERCENTAGE || 50;
 const COMMUNITY_FUND_PERCENTAGE = process.env.COMMUNITY_FUND_PERCENTAGE || 10;
-const COMMUNITY_FUND_WALLET = process.env.COMMUNITY_FUND_ADDRESS || '';
-const DEV_FUND_ADDRESS = process.env.DEV_FUND_ADDRESS || '';
 
 // Initialize ViteClient
 const httpProvider = new HTTP_RPC(RPC_NET);
@@ -67,14 +63,6 @@ const getSBPVoteDetails = async (blockProducer: string, cycleNumber?: string) =>
 	const communityFundWeight = Number(COMMUNITY_FUND_PERCENTAGE) / 100;
 	const totalReward = Number.parseInt(rewardMap[blockProducer]?.totalReward ?? '0');
 	const voterRewardPool = totalReward * (1 - devFundWeight - communityFundWeight);
-	const devReceiver: Receiver = {
-		address: DEV_FUND_ADDRESS,
-		amount: (totalReward * devFundWeight).toPrecision(22).toString(),
-	};
-	const communityReceiver: Receiver = {
-		address: COMMUNITY_FUND_WALLET,
-		amount: (totalReward * communityFundWeight).toPrecision(21).toString(),
-	};
 	console.log(`Total Reward: ${totalReward.toPrecision(22)}`);
      // Now grab SBP vote details of this particular cycle
     var fs = require('fs');
@@ -114,10 +102,10 @@ let blockProducer = "";
 if(SBPOverride != undefined) {
     blockProducer = SBPOverride;
 } else {
-    blockProducer = SBPName;
+    blockProducer = SBP_NAME;
 }
 // Get SBP vote data for SBP node and optional cycle number
 getSBPVoteDetails(blockProducer,cycleOverride)
 .catch(error => {
-	console.error("Could not get SBP vote details for " + SBPName + ":" + error.message);
+	console.error("Could not get SBP vote details for " + SBP_NAME + ":" + error.message);
 });
