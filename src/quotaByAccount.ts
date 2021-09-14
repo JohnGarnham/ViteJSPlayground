@@ -1,16 +1,9 @@
-// Usage: $ generateNewWallet [number-of-addresses]
-// Generates a new wallet and either 5 or number-of-addresses addresses
-// And outputs information 
-
-// Import wallet module from vitejs
-// Wallet reference: https://docs.vite.org/vitej/modules/wallet.html#wallet
 import { HTTP_RPC } from '@vite/vitejs-http';
-import {ViteAPI, accountBlock} from '@vite/vitejs';
-import { RPCResponse } from '@vite/vitejs/distSrc/utils/type';
+import {ViteAPI} from '@vite/vitejs';
 import { QuotaInfo, quotaToUT } from './viteTypes'
 import * as vite from "@vite/vitejs"
 
-const { createAccountBlock, utils } = accountBlock;
+var path = require('path');
 
 // Grab data from .env
 require('dotenv').config();
@@ -28,7 +21,7 @@ const getQuotaDetails = async (address : string) => {
 
 // Check argument count
 if(process.argv.length != 3 && process.argv.length != 4) {
-    console.log("Usage: " + process.argv[1] + " address [MAINNET | TESTNET]");
+    console.log("Usage: " + path.basename(process.argv[1]) + " address [MAINNET | TESTNET]");
     process.exit();
 }
 
