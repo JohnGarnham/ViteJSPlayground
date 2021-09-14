@@ -8,7 +8,7 @@ import { HTTP_RPC } from '@vite/vitejs-http';
 import {ViteAPI, accountBlock} from '@vite/vitejs';
 import { RPCResponse } from '@vite/vitejs/distSrc/utils/type';
 import { QuotaInfo, quotaToUT } from './viteTypes'
-
+import * as vite from "@vite/vitejs"
 
 const { createAccountBlock, utils } = accountBlock;
 
@@ -18,7 +18,7 @@ require('dotenv').config();
 // Grab files from .env
 var RPC_NET = process.env.MAINNET;
 
-
+// Use contract_getQuotaByAccount call to get quota info for specified address
 const getQuotaDetails = async (address : string) => {
     const quotaInfo : QuotaInfo = await viteClient.request('contract_getQuotaByAccount', address);
     console.log("Current Quota: " + quotaToUT(quotaInfo.currentQuota));
@@ -32,8 +32,15 @@ if(process.argv.length != 3 && process.argv.length != 4) {
     process.exit();
 }
 
-// Grab address
+// Grab address 
 var address = process.argv[2];
+// Validate address
+if(!vite.wallet.isValidAddress(address)){
+    console.log("Invalid vite address \"" + address + "\"");
+    process.exit();
+}
+
+// Grab option mode value
 var mode = "MAINNET";
 if(process.argv.length == 4) {
     mode = process.argv[3];
