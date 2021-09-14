@@ -1,10 +1,11 @@
 
 import { HTTP_RPC } from '@vite/vitejs-http';
 import {ViteAPI} from '@vite/vitejs';
-import { printBlockType, QuotaInfo, quotaToUT } from './viteTypes'
+import { PoWDifficultyResult, printBlockType, QuotaInfo, quotaToUT } from './viteTypes'
 import * as vite from "@vite/vitejs"
 import { AccountBlock } from '@vite/vitejs/distSrc/accountblock/accountBlock';
-import { BlockType } from '@vite/vitejs/distSrc/utils/type';
+import { AccountBlockBlock, BlockType } from '@vite/vitejs/distSrc/utils/type';
+import { RPCResponse } from './type';
 
 var path = require('path');
 
@@ -61,18 +62,24 @@ getPoWDifficultyForResponse(fromAddress, toAddress, blockType, data);
 async function getPoWDifficultyForResponse(fromAddress, toAddress, blockType, data) {
     try {
 
-        let result = getCurrentHeightAndPreviousHash(fromAddress);
-        const previousHash = (await result).previousHash;
-        const powDifficulty = await viteClient.request('ledger_getPoWDifficulty', {
+        let result = await getCurrentHeightAndPreviousHash(fromAddress);
+        const previousHash = result.previousHash;
+        const data64 = Buffer.from(data).toString('base64');
+        const powDifficulty : PoWDifficultyResult = await viteClient.request('ledger_getPoWDifficulty', {
             "address": fromAddress,
             "previousHash": previousHash,
             "blockType": blockType,
             "toAddress" : toAddress,
-            "data" : data
+            "data" : data64
+        }).catch(error => {
+            let errorMsg = "Error while getting PoW difficulty : " + error.message;
+            console.log(errorMsg);
+            return;
         })
+        
 
-        let quotaUT = quotaToUT(powDifficulty.requiredQuota);
-        console.log("Required Quota: " + quotaUT + " UT (" + powDifficulty.requiredQuota + ")");
+       // let quotaUT = quotaToUT(powDifficulty.requiredQuota);
+        //console.log("Required Quota: " + quotaUT + " UT (" + powDifficulty.requiredQuota + ")");
         console.log("Difficulty: " + powDifficulty.difficulty);
         console.log("QC: " + powDifficulty.qc);
         console.log("isCongestion: " + powDifficulty.isCongestion);
@@ -81,10 +88,17 @@ async function getPoWDifficultyForResponse(fromAddress, toAddress, blockType, da
         console.log("Error getting PoW difficulty: " + err);
         throw err;
     }
+
 }
 
-async function getCurrentHeightAndPreviousHash(accountAddress) {
-        const latestAccountBlock = await viteClient.request('ledger_getLatestAccountBlock', accountAddress);
+async function getCurrentHeightAndPreviousHash(accountAddress : string) {
+        const latestAccountBlock : AccountBlockBlock = 
+            await viteClient.request('ledger_getLatestAccountBlock', accountAddress).catch(error => {
+                let errorMsg = "Error while getting latest account block:" + error.message;
+                console.log(errorMsg);
+                return;
+            });
+
         let previousHash = "0000000000000000000000000000000000000000000000000000000000000000";
         let height = 1;
 
