@@ -64,7 +64,18 @@ export interface AddressVoteMap {
 	[key: string]: string;
 }
 
+export interface QuotaInfo {
+    currentQuota: Uint64;
+    maxQuota: Uint64;
+    stakeAmount: BigInt;
+}
+
 // Convert RAW units to VITE (18 decimal points)
 export const rawToVite = function(raw) {
     return raw / 1e18;
+}
+
+// Convert quota to UT ( divide by 21000)
+export const quotaToUT = (quota) => {
+    return quota / 21000;
 }
