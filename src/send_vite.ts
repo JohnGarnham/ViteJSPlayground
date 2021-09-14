@@ -58,7 +58,8 @@ const ViteAPI = new vite.ViteAPI(provider,  () => {
 let seed : Hex = config.seed;
 let index = config.index;
 console.log("Using address from seed \"" + seed + "\" index " + index);
-const keyPair = vite.wallet.deriveKeyPairByIndex(seed, index);
+//const keyPair = vite.wallet.deriveKeyPairByIndex(seed, index);
+const keyPair = vite.wallet.deriveKeyPairByPath(seed, "m/44'/666666'/0'");
 const publicKey = keyPair.publicKey;
 const privateKey = keyPair.privateKey;
 const address = vite.wallet.createAddressByPrivateKey(privateKey);
@@ -92,7 +93,7 @@ const sendVite = async (destination : string, tokenId: string, amount : number) 
             toAddress: destination,
             address: address.address,
             tokenId: tokenId,
-            amount: amount
+            amount: amount.toString()
         });
         accountBlock.setProvider(ViteAPI)
         .setPrivateKey(address.privateKey);
@@ -107,44 +108,40 @@ const sendVite = async (destination : string, tokenId: string, amount : number) 
             toAddress: accountBlock.toAddress,
             data: accountBlock.data
         });
-        process.exit(0)
+        const availableQuota = new BigNumber(quotaInfo.currentQuota)
+        // If not enough quota available
+        if(availableQuota.isLessThan(difficulty.requiredQuota)){
+            // Fill PoW 
+            await accountBlock.PoW(difficulty.difficulty)
+        }
+        // Sign the account block
+        await accountBlock.sign()
+        // Attempt to send
+        const hash = (await accountBlock.send()).hash
+
+        return {
+            hash: hash,
+            from: address.address,
+            to: destination,
+            tokenid: tokenId,
+            amount: amount
+        }
+
     } catch(err) {
         console.error(err)
         process.exit(1)
     }
 }
 
-       
-       
-            const [
-                quota,
-                difficulty
-            ] = await Promise.all([
-  
-          
-                .then(() => 
-            ])
-            
-            const availableQuota = new BigNumber(quota.currentQuota)
-            if(availableQuota.isLessThan(difficulty.requiredQuota)){
-                await accountBlock.PoW(difficulty.difficulty)
-            }
-            await accountBlock.sign()
-
-            const hash = (await accountBlock.send()).hash
-
-            return {
-                hash: hash,
-                from: address.address,
-                to: destination,
-                tokenid: tokenId,
-                amount: amount
-            }
-        }
-    }
-
 try{
-    sendVite(address, amount);
+    sendVite(destination, tokenID, amount).then(function(result) {
+        console.log("Sent " + amount + " vite from " + destination + " to " + address.address);
+        console.log("Result: " + result.hash);
+    }).catch(error => {
+        let errorMsg = "Error while getting PoW difficulty : " + error.message;
+        console.log(errorMsg);
+        return;
+    })
 } catch(err) {
     console.error(err)
     process.exit(1)
