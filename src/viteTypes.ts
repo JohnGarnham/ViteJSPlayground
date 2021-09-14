@@ -70,9 +70,33 @@ export interface QuotaInfo {
     stakeAmount: BigInt;
 }
 
+export interface PoWDifficultyResult {
+    requiredQuota : Uint64,
+    difficulty : BigInt,
+    qc : BigInt,
+    isCongestion : boolean
+}
+
+export const printBlockType = ( blockType : BlockType) => {
+    switch(blockType) {
+        case 1: return 'CreateContractRequest';
+        case 2: return 'TransferRequest';
+        case 3: return 'ReIssueRequest';
+        case 4: return 'Response';
+        case 5: return 'ResponseFail';
+        case 6: return 'RefundByContractRequest';
+        case 7: return 'GenesisResponse';
+        default: return 'InvalidBlockType';
+    }
+}
 // Convert RAW units to VITE (18 decimal points)
 export const rawToVite = function(raw) {
     return raw / 1e18;
+}
+
+// Convert units to raw
+export const viteToRaw = function(vite) {
+    return vite * 1e18;
 }
 
 // Convert quota to UT ( divide by 21000)
