@@ -2,6 +2,10 @@
 //import * as vite from "@vite/vitejs"
 //import WS_RPC from "@vite/vitejs-ws"
 // Temporarily use vitejs-notthomiz for fixed memory leaks issue 
+
+import { Hex } from "./type"
+import { PoWDifficultyResult, QuotaInfo } from "./viteTypes"
+
 // until Vite approves his PR
 const vite = require("vitejs-notthomiz")
 const HTTP_RPC = require("vitejs-notthomiz-http").default
@@ -10,94 +14,115 @@ const config = require("./config.json")
 const BigNumber = require("bignumber.js").default
 
 // Usage: ./send_vite destination amount
-const [,,destination, amount] = process.argv
+const [,,destination, amountString] = process.argv
 
+// Validate address
 if(!vite.wallet.isValidAddress(destination)){
     throw new Error("Invalid Address")
 }
-if(!/^\d+(\.\d+)?$/.test(amount)){
+// Validate amount
+if(!/^\d+(\.\d+)?$/.test(amountString)){
     throw new Error("Invalid Amount")
 }
+const amount = parseInt(amountString);
 
 console.log("Attempting to send " + amount + " to " + destination);
 
+// Grab RPC URL and timeout from config.json
 const url = new URL(config.VITE_NODE);
 const timeout = parseInt(config.timeout);
+const tokenID = config.token_id;
 
 console.log("Using " + url + " with timeout of " + timeout + " ms");
 
-process.exit(0);
-
-const provider = /^wss?:$/.test(url.protocol) ? 
-    new WS_RPC(config.VITE_NODE, 6e5, {
+// Set up either WS_RPC or HTTP_RPC
+const provider = /^wss?:$/.test(url.protocol) ?
+    // Websocket
+    new WS_RPC(config.VITE_NODE, timeout, {
         protocol: "",
         headers: "",
         clientConfig: "",
         retryTimes: Infinity,
         retryInterval: 10000
     }) : /^https?:$/.test(url.protocol) ? 
-    new HTTP_RPC(config.VITE_NODE, 6e5) :
-    new Error("Invalid node url: "+config.VITE_NODE)
-if(provider instanceof Error)throw provider
-console.log("Connecting to "+config.VITE_NODE)
+    // HTTP
+    new HTTP_RPC(config.VITE_NODE, timeout) :
+    // Invalid RPC URL format
+    new Error("Invalid node url: " + config.VITE_NODE)
+if(provider instanceof Error) throw provider
 
+// Set up ViteAPI
+const ViteAPI = new vite.ViteAPI(provider,  () => {
+        console.log('Vite client successfully connected: ');
+});
+let seed : Hex = config.seed;
+let index = config.index;
+console.log("Using address from seed \"" + seed + "\" index " + index);
+const keyPair = vite.wallet.deriveKeyPairByIndex(seed, index);
+const publicKey = keyPair.publicKey;
+const privateKey = keyPair.privateKey;
+const address = vite.wallet.createAddressByPrivateKey(privateKey);
+console.log("Address: " + address.address + " Private key: " + privateKey);
 
-const ViteAPI = new vite.ViteAPI(provider, async () => {
-    console.log("Provider ready !")
-    let address
-    switch(config.VITE_LOGIN.type){
-        case "mnemonic": {
-            config.VITE_LOGIN.type = "seed"
-            config.VITE_LOGIN.credentials = vite.wallet.getSeedFromMnemonics(config.VITE_LOGIN.credentials).seedHex
-        }
-        case "seed": {
-            config.VITE_LOGIN.type = "private_key"
-            config.VITE_LOGIN.credentials = vite.wallet.deriveKeyPairByIndex(config.VITE_LOGIN.credentials, config.VITE_LOGIN.index).privateKey
-            config.VITE_LOGIN.index = 0
-        }
-        case "private_key": {
-            if(config.VITE_LOGIN.index !== 0)throw new Error("Invalid index with private key: "+config.VITE_LOGIN.index)
-            address = vite.wallet.createAddressByPrivateKey(config.VITE_LOGIN.credentials)
-            break
-        }
-        default: {
-            throw new Error("Invalid configuration for VITE_LOGIN")
-        }
+const sendVite = async (destination : string, tokenId: string, amount : number) => {
+    // Validate inputs
+    if(!vite.wallet.isValidAddress(destination)) {
+        console.log("Invalid destination address \"" + destination + "\"");
+        throw new Error("Invalid destination address");
     }
-    console.log("Using "+address.address+" as sender !")
-    const actions = {
-        send: async (tokenId, amount, destination) => {
-            if(
-                [tokenId, amount, destination].find(e => typeof e !== "string") ||
-                !vite.utils.isValidTokenId(tokenId) ||
-                !/^\d+$/.test(amount) ||
-                !vite.wallet.isValidAddress(destination)
-            )throw new Error("Invalid Arguments.")
-            const balances = (await ViteAPI.request("ledger_getAccountInfoByAddress", address.address))?.balanceInfoMap || {}
-            const balance = new BigNumber(balances[tokenId]?.balance || "0")
-            if(balance.isLessThan(amount))throw new Error("Insufficient Balance")
+    if(!vite.utils.isValidTokenId(tokenId)) {
+        console.log("Invalid token ID \"" + tokenId + "\"");
+        throw new Error("Invalid token ID");
+    }
+    if(amount < 0) {
+        console.log("Amount must be greater than 0");
+        throw new Error("Amount must be greater than 0");
+    }
+    // Check that we have enough money
+    const balances = (await ViteAPI.request("ledger_getAccountInfoByAddress", address.address))?.balanceInfoMap || {}
+    const balance = new BigNumber(balances[tokenId]?.balance || "0")
+    if(balance.isLessThan(amount)) {
+        let errorMsg = "Insufficient balance. Requested: " + amount + " Available: " + balance;
+        console.log(errorMsg);
+        throw new Error(errorMsg);
+    }
+    try {
+        // Set up account block
+        const accountBlock = vite.accountBlock.createAccountBlock("send", {
+            toAddress: destination,
+            address: address.address,
+            tokenId: tokenId,
+            amount: amount
+        });
+        accountBlock.setProvider(ViteAPI)
+        .setPrivateKey(address.privateKey);
+        accountBlock.autoSetPreviousAccountBlock();
+        // Grab quota associated with this account
+        const quotaInfo : QuotaInfo = await ViteAPI.request('contract_getQuotaByAccount', address.address);
+        // Calculate the required difficulty for this transaction
+        const difficulty : PoWDifficultyResult = ViteAPI.request("ledger_getPoWDifficulty", {
+            address: accountBlock.address,
+            previousHash: accountBlock.previousHash,
+            blockType: accountBlock.blockType,
+            toAddress: accountBlock.toAddress,
+            data: accountBlock.data
+        });
+        process.exit(0)
+    } catch(err) {
+        console.error(err)
+        process.exit(1)
+    }
+}
 
-            const accountBlock = vite.accountBlock.createAccountBlock("send", {
-                toAddress: destination,
-                address: address.address,
-                tokenId: tokenId,
-                amount: amount
-            })
-            accountBlock.setProvider(ViteAPI)
-            .setPrivateKey(address.privateKey)
+       
+       
             const [
                 quota,
                 difficulty
             ] = await Promise.all([
-                ViteAPI.request("contract_getQuotaByAccount", address.address),
-                accountBlock.autoSetPreviousAccountBlock()
-                .then(() => ViteAPI.request("ledger_getPoWDifficulty", {
-                    address: accountBlock.address,
-                    previousHash: accountBlock.previousHash,
-                    blockType: accountBlock.blockType,
-                    toAddress: accountBlock.toAddress,
-                    data: accountBlock.data
-                }))
+  
+          
+                .then(() => 
             ])
             
             const availableQuota = new BigNumber(quota.currentQuota)
@@ -118,12 +143,9 @@ const ViteAPI = new vite.ViteAPI(provider, async () => {
         }
     }
 
-    try{
-        const result = await actions.send("tti_5649544520544f4b454e6e40", new BigNumber(amount).shiftedBy(18).toFixed().split(".")[0], destination)
-        console.log(result)
-        process.exit(0)
-    }catch(err){
-        console.error(err)
-        process.exit(1)
-    }
-})
+try{
+    sendVite(address, amount);
+} catch(err) {
+    console.error(err)
+    process.exit(1)
+}
