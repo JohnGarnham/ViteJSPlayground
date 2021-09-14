@@ -6,6 +6,8 @@ yarn.lock
 tsconfig.json
 *.csv
 *.js
+*.map
 *~
 *.old
 dist/*
+.env
