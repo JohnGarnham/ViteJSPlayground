@@ -4,6 +4,7 @@ package.json
 yarn.lock
 *.log
 tsconfig.json
+config.json
 *.csv
 *.js
 *.map

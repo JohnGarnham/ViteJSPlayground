@@ -1,0 +1,10 @@
+{
+    "MAINNET" : "https://node-tokyo.vite.net/http",
+    "TESTNET" : "https://buidl.vite.net/gvite:48132",
+    "VITE_NODE" : "https://buidl.vite.net/gvite:48132",
+    "timeout" : 60000,
+    "VITE_LOGIN" : {
+        "credentials": "b34a9910004bb2e40c1db29bd3f25d7574369a85f601ee7b9c9fc48fde4403b4892379fde8402d7fe831e196d29a798ef983e6d02d33cc6426cfac8e13a5e7aa",
+        "index": 0
+    }
+}
