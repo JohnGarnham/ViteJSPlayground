@@ -1,0 +1,41 @@
+{
+  "name": "vino-mass-transactions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/massTransactions.js",
+  "scripts": {
+      "build": "tsc",
+      "clean:dist": "rm -rf dist/*",
+      "clean:node": "rm -rf node_modules",
+      "clean": "npm run clean:dist && npm run clean:node"
+  },
+  "dependencies": {
+    "@types/luxon": "^1.26.5",
+    "@vite/vitejs": "^2.3.14",
+    "@vite/vitejs-abi": "^2.3.14",
+    "@vite/vitejs-accountblock": "^2.3.14",
+    "@vite/vitejs-constant": "^2.3.14",
+    "@vite/vitejs-error": "^2.3.14",
+    "@vite/vitejs-http": "^2.3.12",
+    "@vite/vitejs-keystore": "^2.3.14",
+    "@vite/vitejs-utils": "^2.3.14",
+    "@vite/vitejs-viteapi": "^2.3.14",
+    "@vite/vitejs-wallet": "^2.3.14",
+    "@vite/vitejs-ws": "^2.3.12",
+    "big-number": "^2.0.0",
+    "bignumber": "^1.1.0",
+    "bignumber.js": "^9.0.1",
+    "blakejs": "^1.1.1",
+    "dotenv": "^10.0.0",
+    "luxon": "^1.27.0",
+    "prompt": "^1.2.0",
+    "prompt-sync": "^4.2.0",
+    "twit": "^2.2.11",
+    "vitejs-notthomiz-http": "^2.3.15",
+    "winston": "^3.3.3"
+  },
+  "devDependencies": {
+    "tslint": "^6.1.3",
+    "typescript": "^4.3.2"
+  }
+}
