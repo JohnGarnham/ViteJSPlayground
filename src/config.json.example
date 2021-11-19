@@ -1,9 +1,0 @@
-{
-    "MAINNET" : "https://node-tokyo.vite.net/http",
-    "TESTNET" : "https://buidl.vite.net/gvite:48132",
-    "VITE_NODE" : "https://buidl.vite.net/gvite:48132",
-    "timeout" : 60000,
-    "token_id" : "tti_5649544520544f4b454e6e40",
-    "seed" : "",
-    "index" : 0
-}
