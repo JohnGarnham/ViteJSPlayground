@@ -4,10 +4,10 @@
   "description": "",
   "main": "dist/massTransactions.js",
   "scripts": {
-      "build": "tsc",
-      "clean:dist": "rm -rf dist/*",
-      "clean:node": "rm -rf node_modules",
-      "clean": "npm run clean:dist && npm run clean:node"
+    "build": "tsc",
+    "clean:dist": "rm -rf dist/*",
+    "clean:node": "rm -rf node_modules",
+    "clean": "npm run clean:dist && npm run clean:node"
   },
   "dependencies": {
     "@types/luxon": "^1.26.5",

@@ -12,6 +12,7 @@ const HTTP_RPC = require("vitejs-notthomiz-http").default
 const WS_RPC = require("vitejs-notthomiz-ws").default
 const config = require("./config.json")
 const BigNumber = require("bignumber.js").default
+const Config = require('../config.json');    // Loads the configuration values
 
 // Usage: ./send_vite destination amount
 const [,,destination, amountString] = process.argv
@@ -29,27 +30,37 @@ const amount = parseInt(amountString);
 console.log("Attempting to send " + amount + " to " + destination);
 
 // Grab RPC URL and timeout from config.json
-const url = new URL(config.VITE_NODE);
 const timeout = parseInt(config.timeout);
 const tokenID = config.token_id;
 
-console.log("Using " + url + " with timeout of " + timeout + " ms");
+const network = Config.network;
+var viteNode : string = "";
 
-// Set up either WS_RPC or HTTP_RPC
-const provider = /^wss?:$/.test(url.protocol) ?
-    // Websocket
-    new WS_RPC(config.VITE_NODE, timeout, {
-        protocol: "",
-        headers: "",
-        clientConfig: "",
-        retryTimes: Infinity,
-        retryInterval: 10000
-    }) : /^https?:$/.test(url.protocol) ? 
-    // HTTP
-    new HTTP_RPC(config.VITE_NODE, timeout) :
-    // Invalid RPC URL format
-    new Error("Invalid node url: " + config.VITE_NODE)
-if(provider instanceof Error) throw provider
+// Check if MAINNET or TESTNET
+if(network == "MAINNET") {
+	console.log("Setting viteNode to MAINNET " + Config.mainNode);
+	viteNode = Config.mainNode;
+} else if(network == "TESTNET") {
+	console.log("Setting viteNode to TESTNET " + Config.testNode);
+	viteNode = Config.testNode;
+} else {
+	console.log("Invalid network specified: " + network + ". Please set network in config.json to either MAINNET or TESTNET");
+	process.exit(0);
+}
+console.log("Using " + viteNode + " for " + network);
+
+// Determine whether to set up HTTP or WS
+var provider;
+if(viteNode.startsWith("http")) {
+	console.log("Loading " + Config.network + "  with http node " + viteNode);
+	provider = new HTTP_RPC(viteNode);
+} else if(viteNode.startsWith("ws")) {
+	console.log("Loading " + Config.network + "  with ws node " + viteNode);
+	provider = new WS_RPC(viteNode);
+} else {
+	console.log("Invalid protocol for node: " + viteNode + ". Please add https:// or wss://");
+	process.exit(0);
+}
 
 // Set up ViteAPI
 const ViteAPI = new vite.ViteAPI(provider,  () => {

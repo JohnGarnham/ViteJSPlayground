@@ -1,0 +1,10 @@
+{
+  "mainNode": "https://node.vite.net/gvite",
+  "testNode": "https://buidl.vite.net/gvite:48132",
+  "network": "TESTNET",
+  "SBP": "ViNo_Community_Node",
+  "timeout" : 60000,
+  "token_id" : "tti_5649544520544f4b454e6e40",
+  "seed" : "",
+  "index" : 0
+}
