@@ -99,7 +99,11 @@ const sendVite = async (destination : string, tokenId: string, amount : number) 
         .setPrivateKey(address.privateKey);
         accountBlock.autoSetPreviousAccountBlock();
         // Grab quota associated with this account
-        const quotaInfo : QuotaInfo = await ViteAPI.request('contract_getQuotaByAccount', address.address);
+        const quotaInfo : QuotaInfo = await ViteAPI.request('contract_getQuotaByAccount', address.address).catch(error => {
+            let errorMsg = "Error while getting quota by account : " + error.message;
+            console.log(errorMsg);
+            return;
+        })
         // Calculate the required difficulty for this transaction
         const difficulty : PoWDifficultyResult = ViteAPI.request("ledger_getPoWDifficulty", {
             address: accountBlock.address,
@@ -107,15 +111,17 @@ const sendVite = async (destination : string, tokenId: string, amount : number) 
             blockType: accountBlock.blockType,
             toAddress: accountBlock.toAddress,
             data: accountBlock.data
-        });
+        })
         const availableQuota = new BigNumber(quotaInfo.currentQuota)
         // If not enough quota available
         if(availableQuota.isLessThan(difficulty.requiredQuota)){
+            console.log("Filling in PoW");
             // Fill PoW 
             await accountBlock.PoW(difficulty.difficulty)
         }
         // Sign the account block
         await accountBlock.sign()
+   
         // Attempt to send
         const hash = (await accountBlock.send()).hash
 
@@ -138,7 +144,7 @@ try{
         console.log("Sent " + amount + " vite from " + destination + " to " + address.address);
         console.log("Result: " + result.hash);
     }).catch(error => {
-        let errorMsg = "Error while getting PoW difficulty : " + error.message;
+        let errorMsg = "Error while sending vite : " + error.message;
         console.log(errorMsg);
         return;
     })
